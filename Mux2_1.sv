@@ -1,8 +1,8 @@
-module Mux2_1 (a, b, x, Out)
-	input a, b, x;
-	output Out;
+module Mux2_1 (a, b, x, out)
+	input logic a, b, x;
+	output logic out;
 	
-	Out = (a & ~x) | (b & x);
+	out = (a & ~x) | (b & x);
 
 
 endmodlue
