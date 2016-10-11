@@ -1,9 +1,12 @@
 module Mux2_1 (a, b, x, out);
 	input logic a, b, x;
 	output logic out;
+	logic notX, aX, bNotX;
 	
-	assign out = (a & ~x) | (b & x);
-
+	not notControl (notX, x);
+	and aAndX (aX, a, x);
+	and bAndNotX (bNotX, b, notX);
+	or outAssign (out, aX, bNotX);
 
 endmodule
 

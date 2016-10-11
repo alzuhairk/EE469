@@ -48,7 +48,7 @@ endmodule
 
 // Testbench
 
-module mux32_1Testbench();
+module Mux32_1_testbench();
 	parameter ClockDelay = 5000;
 
 	logic[31:0] in;
