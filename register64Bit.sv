@@ -6,9 +6,9 @@ module register64Bit (writeEnable, writeData, dataOut, reset, clk);
 	
 	genvar i;
 	generate
-		for (i = 0; i < 64; i = i + 1) begin:
+		for (i = 0; i < 64; i = i + 1) begin: flipflopWiring
 		
-			Mux2_1 enableMux (.a(dataOut[i]), .b(writeData[i]), .x(writeEnable), .out(d[i]));
+			Mux2_1 enableMux (.a(writeData[i]), .b(dataOut[i]), .x(writeEnable), .out(d[i]));
 		
 			D_FF flipflop (.q(dataOut[i]), .d(d[i]), .reset(reset), .clk(clk));
 		
