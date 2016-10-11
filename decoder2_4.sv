@@ -1,10 +1,15 @@
 module decoder2_4 (in, out);
-input logic [1:0] in;
-output logic [3:0] out;
-assign out[0] = ~in[0] & ~in[1];
-assign out[1] = in[0] & ~in[1];
-assign out[2] = ~in[0] & in[1];
-assign out[3] = in[0] & in[1];
+	input logic [1:0] in;
+	output logic [3:0] out;
+	logic [1:0] nots;
+
+	not nots0 (nots[0], in[0]);
+	not nots1 (nots[1], in[1]);
+	
+	and out0 (out[0], nots[0], nots[1]);
+	and out1 (out[1], in[0], nots[1]);
+	and out2 (out[2], nots[0], in[1]);
+	and out3 (out[3], in[0], in[1]);
 
 endmodule
 
