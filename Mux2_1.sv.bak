@@ -1,14 +1,12 @@
-`timescale 1 ps/ 1 ps	
-
 module Mux2_1 (a, b, x, out);
 	input logic a, b, x;
 	output logic out;
 	logic notX, aX, bNotX;
 	
-	not #50 notControl (notX, x);
-	and #50 aAndX (aX, a, x);
-	and #50 bAndNotX (bNotX, b, notX);
-	or #50 outAssign (out, aX, bNotX);
+	not notControl (notX, x);
+	and aAndX (aX, a, x);
+	and bAndNotX (bNotX, b, notX);
+	or outAssign (out, aX, bNotX);
 
 endmodule
 

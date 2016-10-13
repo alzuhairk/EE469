@@ -1,5 +1,3 @@
-`timescale 1 ps/ 1 ps
-
 module mux64_32_1 (in, x, out);
 input logic [63:0] in [31:0];
 input logic [4:0] x;
@@ -9,7 +7,7 @@ logic [31:0] temp [63:0];
 	generate
 		for (i = 0; i < 64; i++) begin: Mux
 				for (j = 0; j <32; j++) begin: Single_mux
-					buf #50 buffer (temp[i][j], in[j][i]);
+					buf buffer (temp[i][j], in[j][i]);
 				end
 			Mux32_1 mux1 (.in(temp[i]), .x(x[4:0]), .out(out[i]));
 		end
