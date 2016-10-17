@@ -1,0 +1,8 @@
+/*	Single 4-bit unit for ALU using CLA
+	000 > result = B
+	010 > result = A + B
+	011 > result = A - B
+	100 > result = bitwise A & B
+	101 > result = bitwise A | B
+	110 > result = bitwise A XOR B
+*/
