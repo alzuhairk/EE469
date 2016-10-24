@@ -1,0 +1,9 @@
+`timescale 1 ps/1 ps
+module fastAdder (A, B, cntrl, result, negative, carry_out);
+	input logic [63:0] A, B;
+	input logic cntrl;
+	output logic [63:0] result;
+	output logic negative, carry_out;
+
+
+endmodule
