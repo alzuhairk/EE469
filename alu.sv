@@ -40,6 +40,7 @@ endmodule
 module alustim();
 
 	parameter delay = 100000;
+	parameter loopEnd = 1000;
 
 	logic		[63:0]	A, B;
 	logic		[2:0]		cntrl;
@@ -60,23 +61,56 @@ module alustim();
 	
 		$display("%t testing PASS_A operations", $time);
 		cntrl = ALU_PASS_B;
-		for (i=0; i<100; i++) begin
+		for (i=0; i<loopEnd; i++) begin
 			A = $random(); B = $random();
 			#(delay);
 			assert(result == B && negative == B[63] && zero == (B == '0));
 		end
 		
-		$display("%t testing addition", $time);
+		$display("%t testing ADDITION operations", $time);
 		cntrl = ALU_ADD;
-		A = 64'h0000000000000001; B = 64'h0000000000000001;
-		#(delay);
-		assert(result == 64'h0000000000000002 && carry_out == 0 && overflow == 0 && negative == 0 && zero == 0);
+		for (i=0; i<loopEnd; i++) begin
+			A = $random(); B = $random();
+			#(delay);
+			assert(result == (A + B) && negative == result[63] && zero == (result == '0) && overflow == (carry_out ^ ((~A[63] & ~B[63] & result[63]) | (~A[63] & B[63] & ~result[63]) | (A[63] & ~B[63] & ~result[63]) | (A[63] & B[63] & result[63]))));
+		end
 		
-		A <= 64'h0000000000000010;
-		B <= 64'h0000000000000010; #(delay);
-		A <= 64'h0000000000000001;
-		B <= 64'h0000000000000002;
-		cntrl <= ALU_SUBTRACT;		#(delay);#(delay);
+		$display("%t testing SUBSTRACT operations", $time);
+		cntrl = ALU_SUBTRACT;
+		for (i=0; i<loopEnd; i++) begin
+			A = $random(); B = $random();
+			#(delay);
+			assert(result == (A - B) && negative == result[63] && zero == (result == '0));
+		end
+		
+		$display("%t testing AND operations", $time);
+		cntrl = ALU_AND;
+		for (i=0; i<loopEnd; i++) begin
+			A = $random(); B = $random();
+			#(delay);
+			assert(result == (A & B) && negative == result[63] && zero == (result == '0));
+		end
+		
+		$display("%t testing OR operations", $time);
+		cntrl = ALU_OR;
+		for (i=0; i<loopEnd; i++) begin
+			A = $random(); B = $random();
+			#(delay);
+			assert(result == (A | B) && negative == result[63] && zero == (result == '0));
+		end
+		
+		$display("%t testing XOR operations", $time);
+		cntrl = ALU_XOR;
+		for (i=0; i<loopEnd; i++) begin
+			A = $random(); B = $random();
+			#(delay);
+			assert(result == (A ^ B) && negative == result[63] && zero == (result == '0));
+		end
+		
+		A = 64'hffffffffffffffff;
+		B = 64'hffffffffffffffff;
+		cntrl = ALU_ADD;
+		#(delay);
 		
 	end
 endmodule

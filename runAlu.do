@@ -7,6 +7,7 @@ vlib work
 vlog "./alu.sv"
 vlog "./fastAdder.sv"
 vlog "./mux8_1.sv"
+vlog "./mux2_1.sv"
 
 # Call vsim to invoke simulator
 #     Make sure the last item on the line is the name of the

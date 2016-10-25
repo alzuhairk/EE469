@@ -20,7 +20,7 @@ module mux2_1Testbench();
 	logic a, b, x, out;
 	logic clk;
 	
-	mux2_1 dut (.a, .b, .x, .out);
+	Mux2_1 dut (.a, .b, .x, .out);
 	
 	// Force %t's to print in a nice format.
 	initial $timeformat(-9, 2, " ns", 10);
