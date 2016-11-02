@@ -30,3 +30,19 @@ genvar i;
 	assign out[25:0] = in[25:0];
 
 endmodule 
+
+module signExtend9 (in, out);
+input logic [8:0] in; 
+output logic [63:0] out; 
+logic extendBit;
+
+
+genvar i;
+	generate
+		for (i = 63; i > 8; i--) begin: Extend
+			assign out[i] = in[8];
+		end
+	endgenerate
+	assign out[8:0] = in[8:0];
+
+endmodule 
