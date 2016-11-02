@@ -1,4 +1,4 @@
-module shiftLeft (in, out);
+module shiftLeft (in, out)
 input logic [63:0] in; 
 output logic [63:0] out;
 

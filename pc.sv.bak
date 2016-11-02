@@ -8,7 +8,7 @@ module pc (writeEnable, writeData, dataOut, reset, clk);
 	generate
 		for (i = 0; i < 64; i = i + 1) begin: flipflopWiring
 		
-			mux2_1 enableMux (.a(writeData[i]), .b(dataOut[i]), .x(writeEnable), .out(d[i]));
+			Mux2_1 enableMux (.a(writeData[i]), .b(dataOut[i]), .x(writeEnable), .out(d[i]));
 		
 			D_FF flipflop (.q(dataOut[i]), .d(d[i]), .reset(reset), .clk(clk));
 		

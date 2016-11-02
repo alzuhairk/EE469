@@ -1,4 +1,4 @@
-module mux64x2_1 (zero, one, control, out)
+module mux64x2_1 (zero, one, control, out);
 	input logic [63:0] zero, one;
 	input logic control;
 	output logic [63:0] out;

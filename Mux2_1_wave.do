@@ -1,14 +1,15 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate /checkLogicTestbench/clk
-add wave -noupdate /checkLogicTestbench/opcode
-add wave -noupdate /checkLogicTestbench/flags
-add wave -noupdate /checkLogicTestbench/ALUOp
+add wave -noupdate /mux2_1Testbench/clk
+add wave -noupdate /mux2_1Testbench/a
+add wave -noupdate /mux2_1Testbench/b
+add wave -noupdate /mux2_1Testbench/x
+add wave -noupdate /mux2_1Testbench/out
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {0 ps} 0}
-quietly wave cursor active 1
+quietly wave cursor active 0
 configure wave -namecolwidth 150
-configure wave -valuecolwidth 70
+configure wave -valuecolwidth 100
 configure wave -justifyvalue left
 configure wave -signalnamewidth 1
 configure wave -snapdistance 10
@@ -21,4 +22,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {0 ps} {53835 ps}
+WaveRestoreZoom {0 ps} {1 ns}

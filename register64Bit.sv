@@ -1,4 +1,4 @@
-module pc (writeEnable, writeData, dataOut, reset, clk);
+module register64Bit (writeEnable, writeData, dataOut, reset, clk);
 	input logic writeEnable, clk, reset;
 	input logic [63:0] writeData;
 	output logic [63:0] dataOut;
@@ -17,7 +17,7 @@ module pc (writeEnable, writeData, dataOut, reset, clk);
 
 endmodule
 
-module pcTestbench();
+module register64BitTestbench();
 
 	parameter ClockDelay = 5000;
 
@@ -25,7 +25,7 @@ module pcTestbench();
 	logic [63:0] writeData;
 	logic [63:0] dataOut;
 	
-	pc dut (.writeEnable, .writeData, .dataOut, .reset, .clk);
+	register64Bit dut (.writeEnable, .writeData, .dataOut, .reset, .clk);
 	
 	// Force %t's to print in a nice format.
 	initial $timeformat(-9, 2, " ns", 10);

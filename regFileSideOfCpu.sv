@@ -1,4 +1,4 @@
-module regFileSideOfCpu ();
+module cpu ();
 	logic [31:0] instruction;
 	logic [9:0] flags;
 	logic [2:0] ALUOp;
@@ -13,6 +13,15 @@ module regFileSideOfCpu ();
 	logic [4:0] reg2LocMuxOut;
 	logic [63:0] aluInput2MuxOut, ADDImmMuxOut, dataMemOutputMuxOut, ALUSrcMuxOutput, aluOutput, DAddr9SEOut, ALU_Imm12ZEOut, MemToRegMuxOut, BLMuxOut;
 	logic aluNegative, aluZero, aluOverflow, aluCarry_out;
+	
+	
+	logic [63:0] address; 
+	logic [18:0] Imm19;
+	logic [25:0] Imm26;
+	logic [63:0] Imm19Extended, Imm26Extended; 
+	logic [63:0] muxToShiftLeft, shiftLeftToAdder, adderToMux1, adderToMux0, muxBrTakenToMuxBr, muxBrToPC; 
+	logic cOut0, cOut1, overflow0, overflow1;
+	logic reset;
 	
 	assign opcode = instruction[31:21];
 	assign Rd = instruction[4:0];
