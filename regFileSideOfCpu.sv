@@ -101,7 +101,7 @@ module regFileSideOfCpu ();
 	
 	regfile registerFile (.ReadData1(readData1), .ReadData2(readData2), .WriteData(BLMuxOut), .ReadRegister1(Rn), .ReadRegister2(reg2LocMuxOut), .WriteRegister(Rd), .RegWrite(flags[6]), .clk(clk));
 	alu arithmeticLogic (.A(readData1), .B(ALUSrcMuxOutput), .cntrl(ALUOp), .result(aluOutput), .negative(aluNegative), .zero(aluZero), .overflow(aluOverflow), .carry_out(aluCarryOut));
-	datamem dataMemory (.address(aluOutput), .write_enable(flag[5]), .read_enable(1), .write_data(readData2), .clk(clk), .xfer_size(4'b0110), .read_data(readDataMem));
+	datamem dataMemory (.address(aluOutput), .write_enable(flag[5]), .read_enable(1), .write_data(readData2), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
 	
 	
 endmodule
