@@ -16,7 +16,7 @@ module cpu (clk, reset);
 	
 	logic [4:0] reg2LocMuxOut;
 	logic [63:0] aluInput2MuxOut, ADDImmMuxOut, dataMemOutputMuxOut, ALUSrcMuxOutput, aluOutput, DAddr9SEOut, ALU_Imm12ZEOut, MemToRegMuxOut, BLMuxOut;
-	logic aluNegative, aluZero, aluOverflow, aluCarry_out, dataMemReadEn;
+	logic aluNegative, aluZero, aluOverflow, aluCarry_out, dataMemReadEn, BLTTaken;
 	
 	
 	logic [63:0] address; 
@@ -34,7 +34,10 @@ module cpu (clk, reset);
 	assign Rm = instruction[20:16];
 	assign DT_Address9 = instruction[20:12];
 	assign CondAddr19 = instruction[23:5];
-	assign ALU_Imm12 = instruction[21:10];	
+	assign ALU_Imm12 = instruction[21:10];
+	
+	// B.LT XOR
+	xor #50 blt (BLTTaken, aluNegativePrev, aluOverflowPrev);
 	
 	// Flags = reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	always_comb begin
@@ -52,7 +55,7 @@ module cpu (clk, reset);
 			end
 			
 			11'b01010100???: begin // B.LT
-				flags = 10'b???0010?0?;
+				flags = {5'b???00, BLTTaken, 4'b0?0?};
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 			end
@@ -122,6 +125,9 @@ module cpu (clk, reset);
 	zeroExtend ze (.in(ALU_Imm12), .out(ALU_Imm12ZEOut));
 		
 	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
+	
+	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegative), .reset(reset), .clk(clk));
+	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOverflow), .reset(reset), .clk(clk));
 	
 	mux64x2_1 ALUSrcMux (.zero(readData2), .one(ADDImmMuxOut), .control(flags[8]), .out(ALUSrcMuxOutput));
 	mux64x2_1 ADDImmMux (.zero(DAddr9SEOut), .one(ALU_Imm12ZEOut), .control(flags[0]), .out(ADDImmMuxOut));
