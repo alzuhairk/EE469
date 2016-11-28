@@ -120,6 +120,29 @@ module cpu (clk, reset);
 		endcase
 	end
 	
+	// INSTRUCTION FETCH //
+	
+	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
+	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
+	
+	signExtend19 SE1 (.in(Imm19), .out(Imm19Extended));
+	signExtend26 SE2(.in(Imm26), .out(Imm26Extended));
+	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
+	
+	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control(flags[4]), .out(muxBrTakenToMuxBr));
+	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(flags[1]), .out(muxBrToPC));
+	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(flags[3]), .out(muxToShiftLeft));
+	
+	// REGISTER FETCH //
+	
+	regfile registerFile (.ReadData1(readData1), .ReadData2(readData2), .WriteData(BLMuxOut), .ReadRegister1(Rn), .ReadRegister2(reg2LocMuxOut), .WriteRegister(Rd), .RegWrite(flags[6]), .clk(clk));
+	
+	signExtend9 se9 (.in(DT_Address9), .out(DAddr9SEOut));
+	zeroExtend ze (.in(ALU_Imm12), .out(ALU_Imm12ZEOut));
+	
+	mux64x2_1 ALUSrcMux (.zero(readData2), .one(ADDImmMuxOut), .control(flags[8]), .out(ALUSrcMuxOutput));
+	mux64x2_1 BLMux (.zero(MemToRegMuxOut), .one(adderToMux0), .control(flags[2]), .out(BLMuxOut));
+	mux64x2_1 ADDImmMux (.zero(DAddr9SEOut), .one(ALU_Imm12ZEOut), .control(flags[0]), .out(ADDImmMuxOut));
 	
 	genvar i;
 	generate
@@ -127,34 +150,23 @@ module cpu (clk, reset);
 			mux2_1 m (.a(Rm[i]), .b(Rd[i]), .x(flags[9]), .out(reg2LocMuxOut[i]));
 		end
 	
-	endgenerate
+	endgenerate	
 	
-	signExtend19 SE1 (.in(Imm19), .out(Imm19Extended));
-	signExtend26 SE2(.in(Imm26), .out(Imm26Extended));
-	signExtend9 se9 (.in(DT_Address9), .out(DAddr9SEOut));
-	zeroExtend ze (.in(ALU_Imm12), .out(ALU_Imm12ZEOut));
-		
-	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
-	
+	// EXECUTE //
+
+	alu arithmeticLogic (.A(readData1), .B(ALUSrcMuxOutput), .cntrl(ALUOp), .result(aluOutput), .negative(aluNegative), .zero(aluZero), .overflow(aluOverflow), .carry_out(aluCarryOut));
 	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegative), .reset(reset), .clk(clk));
 	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOverflow), .reset(reset), .clk(clk));
 	
-	mux64x2_1 ALUSrcMux (.zero(readData2), .one(ADDImmMuxOut), .control(flags[8]), .out(ALUSrcMuxOutput));
-	mux64x2_1 ADDImmMux (.zero(DAddr9SEOut), .one(ALU_Imm12ZEOut), .control(flags[0]), .out(ADDImmMuxOut));
-	mux64x2_1 MemToRegMux (.zero(aluOutput), .one(readDataMem), .control(flags[7]), .out(MemToRegMuxOut));
-	mux64x2_1 BLMux (.zero(MemToRegMuxOut), .one(adderToMux0), .control(flags[2]), .out(BLMuxOut));
-	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control(flags[4]), .out(muxBrTakenToMuxBr));
-	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(flags[1]), .out(muxBrToPC));
-	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(flags[3]), .out(muxToShiftLeft));
+	// DATA MEMORY //
 	
+	datamem dataMemory (.address(aluOutput), .write_enable(flags[5]), .read_enable(dataMemReadEn), .write_data(readData2), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
 	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
+
+	mux64x2_1 MemToRegMux (.zero(aluOutput), .one(readDataMem), .control(flags[7]), .out(MemToRegMuxOut));
 	
-	regfile registerFile (.ReadData1(readData1), .ReadData2(readData2), .WriteData(BLMuxOut), .ReadRegister1(Rn), .ReadRegister2(reg2LocMuxOut), .WriteRegister(Rd), .RegWrite(flags[6]), .clk(clk));
-	alu arithmeticLogic (.A(readData1), .B(ALUSrcMuxOutput), .cntrl(ALUOp), .result(aluOutput), .negative(aluNegative), .zero(aluZero), .overflow(aluOverflow), .carry_out(aluCarryOut));
-	datamem dataMemory (.address(aluOutput), .write_enable(flags[5]), .read_enable(dataMemReadEn), .write_data(readData2), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
-	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
-	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
+	// WRITE BACK //
 	
 endmodule
 
