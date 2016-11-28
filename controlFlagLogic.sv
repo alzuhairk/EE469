@@ -1,10 +1,15 @@
-module controlFlagLogic (opcode, instruction, flags, ALUOp, dataMemReadEn, Rd);
+`timescale 1 ps/1 ps
+
+module controlFlagLogic (opcode, instruction, aluNegativePrev, aluOverflowPrev, flags, ALUOp, dataMemReadEn, Rd);
 	input logic [10:0] opcode;
 	input logic [31:0] instruction;
+	input logic aluNegativePrev, aluOverflowPrev;
 	output logic [9:0] flags;
 	output logic [2:0] ALUOp;
 	output logic dataMemReadEn;
 	output logic [4:0] Rd;
+	
+	xor #50 blt (BLTTaken, aluNegativePrev, aluOverflowPrev);
 
 	always_comb begin
 		casez (opcode)
@@ -30,7 +35,7 @@ module controlFlagLogic (opcode, instruction, flags, ALUOp, dataMemReadEn, Rd);
 			end
 			
 			11'b10110100???: begin // CBZ
-				flags = {5'b00?00, aluZero, 4'b0?0?};
+				flags = {5'b00?00, /*SET TO USE ACCEL BRANCHES */ 1'b0, 4'b0?0?};
 				ALUOp = 3'b000;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
