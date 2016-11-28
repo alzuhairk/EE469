@@ -47,7 +47,7 @@ module cpu (clk, reset);
 	
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
 	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
-	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));
+	
 	
 	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(instruction), .dataOut(ifInstruction), .reset(reset), .clk(clk));
 	
@@ -64,6 +64,8 @@ module cpu (clk, reset);
 	regfile registerFile (.ReadData1(readData1), .ReadData2(readData2), .WriteData(BLMuxOut), .ReadRegister1(Rn), .ReadRegister2(reg2LocMuxOut), .WriteRegister(Rd), .RegWrite(flags[6]), .clk(clk));
 	
 	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(ifInstruction), .dataOut(rfInstruction), .reset(reset), .clk(clk));
+	
+	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));
 	
 	signExtend9 se9 (.in(DT_Address9), .out(DAddr9SEOut));
 	zeroExtend ze (.in(ALU_Imm12), .out(ALU_Imm12ZEOut));
@@ -86,7 +88,7 @@ module cpu (clk, reset);
 	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegative), .reset(reset), .clk(clk));
 	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOverflow), .reset(reset), .clk(clk));
 	
-	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
+	register32Bit exInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
 	
 	// DATA MEMORY //
 	
@@ -94,12 +96,12 @@ module cpu (clk, reset);
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
 	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
 
-	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(exInstruction), .dataOut(dmInstruction), .reset(reset), .clk(clk));
+	register32Bit dmInstructionRegister (.writeEnable(1'b1), .writeData(exInstruction), .dataOut(dmInstruction), .reset(reset), .clk(clk));
 	
 	mux64x2_1 MemToRegMux (.zero(aluOutput), .one(readDataMem), .control(flags[7]), .out(MemToRegMuxOut));
 	
 	// WRITE BACK //
-	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(dmInstruction), .dataOut(wbInstruction), .reset(reset), .clk(clk));
+	register32Bit wbInstructionRegister (.writeEnable(1'b1), .writeData(dmInstruction), .dataOut(wbInstruction), .reset(reset), .clk(clk));
 	
 endmodule
 
