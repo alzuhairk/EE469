@@ -45,21 +45,23 @@ module cpu (clk, reset);
 	// rfFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	// dmFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	// wbFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
+	
 	// INSTRUCTION FETCH //
 	
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
 	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
-	
-	
-	register32Bit ifInstructionRegister (.writeEnable(1'b1), .writeData(instruction), .dataOut(ifInstruction), .reset(reset), .clk(clk));
-	
+		
 	signExtend19 SE1 (.in(Imm19), .out(Imm19Extended));
 	signExtend26 SE2(.in(Imm26), .out(Imm26Extended));
 	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
 	
+	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
+	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
+	
 	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control(flags[4]), .out(muxBrTakenToMuxBr));
 	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(flags[1]), .out(muxBrToPC));
 	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(flags[3]), .out(muxToShiftLeft));
+	
 	
 	// REGISTER FETCH //
 	
@@ -139,4 +141,3 @@ module cpuTestbench ();
 	end
 
 endmodule
-
