@@ -16,39 +16,3 @@ module register32Bit (writeEnable, writeData, dataOut, reset, clk);
 	endgenerate
 
 endmodule
-
-module register64BitTestbench();
-
-	parameter ClockDelay = 5000;
-
-	logic writeEnable, clk, reset;
-	logic [63:0] writeData;
-	logic [63:0] dataOut;
-	
-	register64Bit dut (.writeEnable, .writeData, .dataOut, .reset, .clk);
-	
-	// Force %t's to print in a nice format.
-	initial $timeformat(-9, 2, " ns", 10);
-
-	initial begin // Set up the clock
-		clk <= 0;
-		forever #(ClockDelay/2) clk <= ~clk;
-	end
-	
-	initial begin
-		writeEnable <= 0;
-		reset <= 1;
-		writeData <= 64'h00000000000000A0;	@(posedge clk);
-		reset <= 0;									@(posedge clk);
-		writeEnable <= 1;							@(posedge clk);
-		writeEnable <=0;							@(posedge clk);
-		writeEnable <= 1;
-		writeData <= 64'h0000010204080001;	@(posedge clk);
-		writeEnable <= 0;							@(posedge clk);
-		reset <= 1;									@(posedge clk);
-		reset <= 0;									@(posedge clk);
-
-		$stop;
-	end
-	
-endmodule
