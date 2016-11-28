@@ -26,6 +26,9 @@ module cpu (clk, reset);
 	logic [63:0] muxToShiftLeft, shiftLeftToAdder, adderToMux1, adderToMux0, muxBrTakenToMuxBr, muxBrToPC; 
 	logic cOut0, cOut1, overflow0, overflow1;
 	
+	// PIPELINE LOGICS //
+	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
+	
 	assign Imm19 = instruction[23:5];
 	assign Imm26 = instruction[25:0];
 	assign opcode = instruction[31:21];
@@ -125,6 +128,8 @@ module cpu (clk, reset);
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
 	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
 	
+	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(instruction), .dataOut(ifInstruction), .reset(reset), .clk(clk));
+	
 	signExtend19 SE1 (.in(Imm19), .out(Imm19Extended));
 	signExtend26 SE2(.in(Imm26), .out(Imm26Extended));
 	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
@@ -136,6 +141,8 @@ module cpu (clk, reset);
 	// REGISTER FETCH //
 	
 	regfile registerFile (.ReadData1(readData1), .ReadData2(readData2), .WriteData(BLMuxOut), .ReadRegister1(Rn), .ReadRegister2(reg2LocMuxOut), .WriteRegister(Rd), .RegWrite(flags[6]), .clk(clk));
+	
+	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(ifInstruction), .dataOut(rfInstruction), .reset(reset), .clk(clk));
 	
 	signExtend9 se9 (.in(DT_Address9), .out(DAddr9SEOut));
 	zeroExtend ze (.in(ALU_Imm12), .out(ALU_Imm12ZEOut));
@@ -158,15 +165,20 @@ module cpu (clk, reset);
 	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegative), .reset(reset), .clk(clk));
 	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOverflow), .reset(reset), .clk(clk));
 	
+	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
+	
 	// DATA MEMORY //
 	
 	datamem dataMemory (.address(aluOutput), .write_enable(flags[5]), .read_enable(dataMemReadEn), .write_data(readData2), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
 	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
 
+	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(exInstruction), .dataOut(dmInstruction), .reset(reset), .clk(clk));
+	
 	mux64x2_1 MemToRegMux (.zero(aluOutput), .one(readDataMem), .control(flags[7]), .out(MemToRegMuxOut));
 	
 	// WRITE BACK //
+	register32Bit rfInstructionRegister (.writeEnable(1'b1), .writeData(dmInstruction), .dataOut(wbInstruction), .reset(reset), .clk(clk));
 	
 endmodule
 
