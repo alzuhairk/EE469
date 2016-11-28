@@ -1,4 +1,4 @@
-module register64Bit (writeEnable, writeData, dataOut, reset, clk);
+module register32Bit (writeEnable, writeData, dataOut, reset, clk);
 	input logic writeEnable, clk, reset;
 	input logic [31:0] writeData;
 	output logic [31:0] dataOut;
