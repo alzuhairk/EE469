@@ -8,6 +8,7 @@ module comp5Bit (a, b, out);
 	//Logic
 	logic [4:0] xorOuts;
 	logic lowOr, notOut;
+	logic innerAnd, checkX31, outOrs;
 	
 	xor #50 xor0 (xorOuts[0], a[0], b[0]);
 	xor #50 xor1 (xorOuts[1], a[1], b[1]);
@@ -17,7 +18,12 @@ module comp5Bit (a, b, out);
 	
 	or #50 or0 (lowOr, xorOuts[0], xorOuts[1], xorOuts[2]);
 	or #50 outOr (notOut, lowOr, xorOuts[3], xorOuts[4]);
-	not #50 invertOut (out, notOut);
+	not #50 invertOut (outOrs, notOut);
+	
+	and #50 innerAndOut (innerAnd, b[0], b[1], b[2]);
+	and #50 checkX31And (checkX31, innerAnd, b[3], b[4]);
+	
+	mux2_1 outMux (.a(1'b0), .b(outOrs), .x(checkX31), .out(out));
 
 endmodule
 
