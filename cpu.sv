@@ -22,16 +22,16 @@ module cpu (clk, reset);
 	logic [63:0] address; 
 	logic [18:0] Imm19;
 	logic [25:0] Imm26;
-	logic [63:0] Imm19Extended, Imm26Extended; 
+	logic [63:0] Imm19Extended, Imm26Extended, rfImm19Extended, acelerateBranch; 
 	logic [63:0] muxToShiftLeft, shiftLeftToAdder, adderToMux1, adderToMux0, muxBrTakenToMuxBr, muxBrToPC; 
 	logic cOut0, cOut1, overflow0, overflow1;
 	
 	// PIPELINE LOGICS //
-	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
+	logic [31:0] rfInstruction, exInstruction, dmInstruction, wbInstruction;
 	logic [13:0] exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
 	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL;
-	
+	logic isZero, branch;
 	assign Imm19 = instruction[23:5];
 	assign Imm26 = instruction[25:0];
 	assign opcode = instruction[31:21];
@@ -46,13 +46,21 @@ module cpu (clk, reset);
 	// dmFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	// wbFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	
+	// Accelerate Branches
+	
+	
+	//signExtend19 SE1 (.in(rfInstruction[23:5]), .out(rfImm19Extended));
+	//fastAdder FA0 (.A(address), .B(rfImm19Extended), .cntrl(1'b0), .result(acelerateBranch), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
+	comapreZero cmp (.result(readData2), isZero(isZero)));
+	//or #50 (branch, isZero, exFlags[4]);
+	//mux64x2_1 fastBranchMux (.zero(adderToMux0), .one(acelerateBranch), .control(isZero), .out());
 	// INSTRUCTION FETCH //
 	
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address), .reset(reset), .clk(clk));
 	instructmem insMem(.address(address), .instruction(instruction), .clk(clk));
 		
-	signExtend19 SE1 (.in(Imm19), .out(Imm19Extended));
-	signExtend26 SE2(.in(Imm26), .out(Imm26Extended));
+	signExtend19 SE1 (.in(rfInstruction[23:5]), .out(Imm19Extended));
+	signExtend26 SE2(.in(rfinstruction[25:0]), .out(Imm26Extended));
 	shiftLeft SL (.in(muxToShiftLeft), .out(shiftLeftToAdder));
 	
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
@@ -71,7 +79,7 @@ module cpu (clk, reset);
 	register64Bit rfDaRegister (.writeEnable(1'b1), .writeData(readData1), .dataOut(rfDa), .reset(reset), .clk(clk));
 	register64Bit rfDbRegister (.writeEnable(1'b1), .writeData(ALUSrcMuxOutput), .dataOut(rfDb), .reset(reset), .clk(clk));
 	
-	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .aluNegativePrev(aluNegativePrev), .aluOverflowPrev(aluOverflowPrev), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));
+	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .aluNegativePrev(aluNegativePrev), .aluOverflowPrev(aluOverflowPrev), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));
 	
 	signExtend9 se9 (.in(rfInstruction[20:12]), .out(DAddr9SEOut));
 	zeroExtend ze (.in(rfInstruction[21:10]), .out(ALU_Imm12ZEOut));
@@ -120,6 +128,7 @@ module cpu (clk, reset);
 		mux2_1 m (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
 	
 	endgenerate	
+	
 	
 endmodule
 
