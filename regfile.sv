@@ -1,8 +1,13 @@
-module regfile(ReadData1, ReadData2, WriteData, ReadRegister1, ReadRegister2, WriteRegister, RegWrite, clk);
+`timescale 1 ps/1 ps
+
+module regfile(ReadData1, ReadData2, WriteData, ReadRegister1, ReadRegister2, WriteRegister, RegWrite, posClk);
 	input logic [4:0] ReadRegister1, ReadRegister2, WriteRegister;
-	input logic RegWrite, clk;
+	input logic RegWrite, posClk;
 	input logic [63:0] WriteData;
 	output logic [63:0] ReadData1, ReadData2;
+	logic clk;
+	
+	not #50 invertClk (clk, posClk);
 	
 	// Set up 5 to 32 Decoder for writing data
 	logic [31:0] decoderOut;
