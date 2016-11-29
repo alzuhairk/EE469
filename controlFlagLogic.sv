@@ -3,7 +3,7 @@
 module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverflowPrev, flags, ALUOp, dataMemReadEn, Rd);
 	input logic [10:0] opcode;
 	input logic [31:0] instruction;
-	input logic aluNegativePrev, aluOverflowPrev;
+	input logic aluNegativePrev, aluOverflowPrev, BrTaken;
 	output logic [9:0] flags;
 	output logic [2:0] ALUOp;
 	output logic dataMemReadEn;
@@ -35,7 +35,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 			end
 			
 			11'b10110100???: begin // CBZ
-				flags = {5'b00?00, BrTaken, 4'b0?0?};
+				flags = {5'b00?00, /*BrTaken*/ 1'b1, 4'b0?0?};
 				ALUOp = 3'b000;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
