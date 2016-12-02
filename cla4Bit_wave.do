@@ -1,0 +1,27 @@
+onerror {resume}
+quietly WaveActivateNextPane {} 0
+add wave -noupdate /cla4BitTestbench/clk
+add wave -noupdate /cla4BitTestbench/ctrl
+add wave -noupdate /cla4BitTestbench/cIn
+add wave -noupdate /cla4BitTestbench/cOut
+add wave -noupdate -radix decimal -radixshowbase 0 /cla4BitTestbench/a
+add wave -noupdate -radix decimal -radixshowbase 0 /cla4BitTestbench/b
+add wave -noupdate -radix decimal -radixshowbase 0 /cla4BitTestbench/result
+TreeUpdate [SetDefaultTree]
+WaveRestoreCursors {{Cursor 1} {0 ps} 0}
+quietly wave cursor active 1
+configure wave -namecolwidth 76
+configure wave -valuecolwidth 100
+configure wave -justifyvalue left
+configure wave -signalnamewidth 1
+configure wave -snapdistance 10
+configure wave -datasetprefix 0
+configure wave -rowmargin 4
+configure wave -childrowmargin 2
+configure wave -gridoffset 0
+configure wave -gridperiod 1
+configure wave -griddelta 40
+configure wave -timeline 0
+configure wave -timelineunits ps
+update
+WaveRestoreZoom {0 ps} {42480 ps}

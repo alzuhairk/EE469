@@ -1,0 +1,5 @@
+`timescale 1 ps/1 ps
+
+module alu (A, B, cntrl, result, negative, zero, overflow, carry_out);
+
+endmodule

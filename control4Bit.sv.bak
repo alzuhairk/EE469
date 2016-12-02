@@ -1,0 +1,22 @@
+module control4Bit ();
+	
+	
+	// Setup other operations
+	and #50 and0 (outputAnd[0], a[0], bO[0]);
+	and #50 and1 (outputAnd[1], a[1], bO[1]);
+	and #50 and2 (outputAnd[2], a[2], bO[2]);
+	and #50 and3 (outputAnd[3], a[3], bO[3]);
+	
+	or #50 or0 (outputOr[0], a[0], bO[0]);
+	or #50 or1 (outputOr[1], a[1], bO[1]);
+	or #50 or2 (outputOr[2], a[2], bO[2]);
+	or #50 or3 (outputOr[3], a[3], bO[3]);
+	
+	xor #50 xor0 (outputXor[0], a[0], bO[0]);
+	xor #50 xor1 (outputXor[1], a[1], bO[1]);
+	xor #50 xor2 (outputXor[2], a[2], bO[2]);
+	xor #50 xor3 (outputXor[3], a[3], bO[3]);
+	
+	
+	
+endmodule
