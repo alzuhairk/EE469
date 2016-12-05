@@ -18,6 +18,8 @@ module cpu (clk, reset);
 	logic [63:0] aluInput2MuxOut, ADDImmMuxOut, dataMemOutputMuxOut, ALUSrcMuxOutput, aluOutput, DAddr9SEOut, ALU_Imm12ZEOut, MemToRegMuxOut, BLMuxOut;
 	logic aluNegative, aluZero, aluOverflow, aluCarry_out, dataMemReadEn, BLTTaken, aluNegativePrev, aluOverflowPrev;
 	
+	logic exRdRfRnMatchComp5Out, dmRdRfRnMatchComp5Out;
+	logic exRdRfRmMatchComp5Out, dmRdRfRmMatchComp5Out, NOTexIsSTURorCBZ, NOTdmIsSTURorCBZ;
 	
 	logic [63:0] address, address0; 
 	logic [18:0] Imm19;
@@ -31,7 +33,7 @@ module cpu (clk, reset);
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
 	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL, exDataPassthroughValue, forwardedDataRfRm, forwardedDataRfRd, forwardingDataRfDb;
-	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, aluNegativeFlag, aluOverflowFlag, doBr, aluOveSaveValue, aluNegSaveValue, isSTURorCBZ, exRfRdExRdMatch, dmRfRdExRdMatch, rfIsSTURorCBZ, isSTURorCBZforIForRF, exIsSTURorCBZ, dmIsSTURorCBZ;
+	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, aluNegativeFlag, aluOverflowFlag, doBr, aluOveSaveValue, aluNegSaveValue, isSTURorCBZ, exRfRdExRdMatch, dmRfRdExRdMatch, rfIsSTURorCBZ, exIsSTURorCBZ, dmIsSTURorCBZ;
 	logic [4:0] rfRn, rfRm, exRd, dmRd, dmComp5BitAVal, exComp5BitAVal, forwardingRfRdMuxValForComp;
 	logic [1:0] brType, rfBrType;
 	
@@ -160,24 +162,30 @@ module cpu (clk, reset);
 		mux2_1 m2 (.a(1'b0), .b(dmRd[0]), .x(dmFlags[2]), .out(dmComp5BitAVal[0]));
 	
 	endgenerate	
-	logic exRdRfRnMatchComp5Out, dmRdRfRnMatchComp5Out;
-	logic exRdRfRmMatchComp5Out, dmRdRfRmMatchComp5Out;
+	
 	
 	comp5Bit dmToRfRn (.a(dmComp5BitAVal), .b(rfRn), .out(dmRdRfRnMatchComp5Out));
 	comp5Bit dmToRfRm (.a(dmComp5BitAVal), .b(rfRm), .out(dmRdRfRmMatchComp5Out));
 	comp5Bit exToRfRn (.a(exComp5BitAVal), .b(rfRn), .out(exRdRfRnMatchComp5Out));
 	comp5Bit exToRfRm (.a(exComp5BitAVal), .b(rfRm), .out(exRdRfRmMatchComp5Out));
 	
-	assign exRdRfRmMatch = exRdRfRmMatchComp5Out & ~ exIsSTURorCBZ;
-	assign dmRdRfRmMatch = dmRdRfRmMatchComp5Out & ~ dmIsSTURorCBZ;
+	not #50 notExIsSTURorCBZGate (NOTexIsSTURorCBZ, exIsSTURorCBZ);
+	not #50 notDmIsSTURorCBZGate (NOTdmIsSTURorCBZ, dmIsSTURorCBZ);
+	and #50 exRdRfRmMatchGate (exRdRfRmMatch, exRdRfRmMatchComp5Out, NOTexIsSTURorCBZ);
+	and #50 exRdRfRnMatchGate (exRdRfRnMatch, exRdRfRnMatchComp5Out, NOTexIsSTURorCBZ);
+	and #50 dmRdRfRmMatchGate (dmRdRfRmMatch, dmRdRfRmMatchComp5Out, NOTdmIsSTURorCBZ);
+	and #50 dmRdRfRnMatchGate (dmRdRfRnMatch, dmRdRfRnMatchComp5Out, NOTdmIsSTURorCBZ);
 	
-	assign exRdRfRnMatch = exRdRfRnMatchComp5Out & ~ exIsSTURorCBZ;
-	assign dmRdRfRnMatch = dmRdRfRnMatchComp5Out & ~ dmIsSTURorCBZ;
+	//assign exRdRfRmMatch = exRdRfRmMatchComp5Out & ~ exIsSTURorCBZ;
+	//assign dmRdRfRmMatch = dmRdRfRmMatchComp5Out & ~ dmIsSTURorCBZ;
+	
+	//assign exRdRfRnMatch = exRdRfRnMatchComp5Out & ~ exIsSTURorCBZ;
+	//assign dmRdRfRnMatch = dmRdRfRnMatchComp5Out & ~ dmIsSTURorCBZ;
 	
 	// For rd as a read, i.e. STUR and CBZ
 	generate
 		for (i = 0; i < 5; i++) begin: SetIsSTURorCBZMuxes // rd = 30 if BL
-			mux2_1 m3 (.a(rfInstruction[i]), .b(1'b1), .x(isSTURorCBZforIForRF), .out(forwardingRfRdMuxValForComp[i]));
+			mux2_1 m3 (.a(rfInstruction[i]), .b(1'b1), .x(rfIsSTURorCBZ), .out(forwardingRfRdMuxValForComp[i]));
 		end	
 	endgenerate
 	
@@ -185,12 +193,11 @@ module cpu (clk, reset);
 	comp5Bit dmToRfRd (.a(forwardingRfRdMuxValForComp), .b(dmComp5BitAVal), .out(dmRfRdDmRdMatch));
 	
 	or #50 setUseForwardedDataRfRd (useForwardedDataRfRd, exRfRdExRdMatch, dmRfRdDmRdMatch);
-	or #50 setIsSTURorCBZForIFandRF (isSTURorCBZforIForRF, 1'b0, rfIsSTURorCBZ);
 	
 	mux64x2_1 chooseSourceForForwardedDataForRfRd (.zero(exAluOutput), .one(aluOutput), .control(exRfRdExRdMatch), .out(forwardingDataRfDb));
 	mux64x2_1 setRfDbForwardedFromDwMux (.zero(readData2), .one(forwardingDataRfDb), .control(useForwardedDataRfRd), .out(forwardedDataRfRd));
 	
-	mux64x2_1 setDataDb (.zero(forwardedDataRfRm), .one(forwardedDataRfRd), .control(isSTURorCBZforIForRF), .out(regDataDb));
+	mux64x2_1 setDataDb (.zero(forwardedDataRfRm), .one(forwardedDataRfRd), .control(rfIsSTURorCBZ), .out(regDataDb));
 	
 	or #50 setUseForwardedDataDa (useForwardedDataDa, dmRdRfRnMatch, exRdRfRnMatch);
 	or #50 setUseForwardedDataDb (useForwardedDataDb, dmRdRfRmMatch, exRdRfRmMatch);	
@@ -212,7 +219,7 @@ endmodule
 
 module cpuTestbench ();
 
-	parameter ClockDelay = 10000;
+	parameter ClockDelay = 15000;
 	parameter loopEnd = 1000;
 
 	logic clk;
