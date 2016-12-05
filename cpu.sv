@@ -30,7 +30,7 @@ module cpu (clk, reset);
 	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
-	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out;
+	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL;
 	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag, doBr;
 	logic [4:0] rfRn, rfRm, exRd, dmRd;
 	logic [1:0] brType, rfBrType;
@@ -78,7 +78,7 @@ module cpu (clk, reset);
 	
 	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd), .brType(brType));
 
-	mux4_1 doBrMux (.in({1'b0, BLTTaken, isZero, 1'b1}), .x(rfBrType), .out(doBr));
+	mux4_1 doBrMux (.in({1'b1, isZero, BLTTaken, 1'b0}), .x(rfBrType), .out(doBr));
 	
 	// REGISTER FETCH //
 	
@@ -117,6 +117,7 @@ module cpu (clk, reset);
 	register14Bit exFlagsRegister (.writeEnable(1'b1), .writeData(rfFlags), .dataOut(exFlags), .reset(reset), .clk(clk));
 	register64Bit exAluOutRegister (.writeEnable(1'b1), .writeData(aluOutput), .dataOut(exAluOutput), .reset(reset), .clk(clk));
 	register64Bit exReadData2Register (.writeEnable(1'b1), .writeData(readData2), .dataOut(exReadData2Out), .reset(reset), .clk(clk));
+	register64Bit exPcForBLRegister (.writeEnable(1'b1), .writeData(address0), .dataOut(exPcForBL), .reset(reset), .clk(clk));
 	
 	mux2_1 chooseFlagSourceNegative (.a(aluNegative), .b(aluNegativePrev), .x(exFlags[9]), .out(aluNegativeFlag));
 	mux2_1 chooseFlagSourceOverflow (.a(aluOverflow), .b(aluOverflowPrev), .x(exFlags[9]), .out(aluOverflowFlag));
@@ -129,14 +130,16 @@ module cpu (clk, reset);
 	register14Bit dmFlagsRegister (.writeEnable(1'b1), .writeData(exFlags), .dataOut(dmFlags), .reset(reset), .clk(clk));
 	register64Bit dmMemToRegToLRegister (.writeEnable(1'b1), .writeData(MemToRegMuxOut), .dataOut(dmMemToRegToL), .reset(reset), .clk(clk));
 	register64Bit dmReadData2Register (.writeEnable(1'b1), .writeData(exReadData2Out), .dataOut(dmReadData2Out), .reset(reset), .clk(clk));
+	register64Bit dmPcForBLRegister (.writeEnable(1'b1), .writeData(exPcForBL), .dataOut(dmPcForBL), .reset(reset), .clk(clk));
 	
 	mux64x2_1 MemToRegMux (.zero(exAluOutput), .one(readDataMem), .control(dmFlags[7]), .out(MemToRegMuxOut));
 	
 	// WRITE BACK //
 	register32Bit wbInstructionRegister (.writeEnable(1'b1), .writeData(dmInstruction), .dataOut(wbInstruction), .reset(reset), .clk(clk));
 	register14Bit wbFlagsRegister (.writeEnable(1'b1), .writeData(dmFlags), .dataOut(wbFlags), .reset(reset), .clk(clk));
+	register64Bit wbPcForBLRegister (.writeEnable(1'b1), .writeData(dmPcForBL), .dataOut(wbPcForBL), .reset(reset), .clk(clk));
 	
-	mux64x2_1 BLMux (.zero(dmMemToRegToL), .one(adderToMux0), .control(wbFlags[2]), .out(BLMuxOut));
+	mux64x2_1 BLMux (.zero(dmMemToRegToL), .one(wbPcForBL), .control(wbFlags[2]), .out(BLMuxOut));
 	
 	// FORWARDING //
 	comp5Bit dmToRfRn (.a(dmRd), .b(rfRn), .out(dmRdRfRnMatch));
