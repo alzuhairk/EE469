@@ -144,11 +144,11 @@ module cpu (clk, reset);
 	
 	// FORWARDING //
 	generate
-		for (i = 0; i < 5; i++) begin: setUpBL // rd = 30 if BL
-			mux2_1 m (.a(1'b1), .b(exRd[i]), .x(exFlags[2]), .out(exComp5BitAVal[i]));
+		for (i = 1; i < 5; i++) begin: setUpBL // rd = 30 if BL
+			mux2_1 m1 (.a(1'b1), .b(exRd[i]), .x(exFlags[2]), .out(exComp5BitAVal[i]));
 			mux2_1 m2 (.a(1'b1), .b(dmRd[i]), .x(dmFlags[2]), .out(dmComp5BitAVal[i]));
 		end
-		mux2_1 m (.a(1'b0), .b(exRd[0]), .x(exFlags[2]), .out(exComp5BitAVal[0]));
+		mux2_1 m1 (.a(1'b0), .b(exRd[0]), .x(exFlags[2]), .out(exComp5BitAVal[0]));
 		mux2_1 m2 (.a(1'b0), .b(dmRd[0]), .x(dmFlags[2]), .out(dmComp5BitAVal[0]));
 	
 	endgenerate	
@@ -173,7 +173,7 @@ module cpu (clk, reset);
 		for (i = 1; i < 5; i++) begin: setRd // rd = 30 if BL
 			mux2_1 m (.a(1'b1), .b(wbInstruction[i]), .x(wbFlags[2]), .out(wbRd[i]));
 		end
-		mux2_1 m3 (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
+		mux2_1 m (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
 	
 	endgenerate	
 	
