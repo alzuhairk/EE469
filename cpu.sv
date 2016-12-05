@@ -30,9 +30,9 @@ module cpu (clk, reset);
 	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
-	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL;
+	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL, exDataPassthroughValue;
 	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag, doBr;
-	logic [4:0] rfRn, rfRm, exRd, dmRd;
+	logic [4:0] rfRn, rfRm, exRd, dmRd, dmComp5BitAVal, exComp5BitAVal;
 	logic [1:0] brType, rfBrType;
 	
 	assign Imm19 = instruction[23:5]; 
@@ -115,12 +115,13 @@ module cpu (clk, reset);
 	
 	register32Bit exInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
 	register14Bit exFlagsRegister (.writeEnable(1'b1), .writeData(rfFlags), .dataOut(exFlags), .reset(reset), .clk(clk));
-	register64Bit exAluOutRegister (.writeEnable(1'b1), .writeData(aluOutput), .dataOut(exAluOutput), .reset(reset), .clk(clk));
+	register64Bit exAluOutRegister (.writeEnable(1'b1), .writeData(exDataPassthroughValue), .dataOut(exAluOutput), .reset(reset), .clk(clk));
 	register64Bit exReadData2Register (.writeEnable(1'b1), .writeData(readData2), .dataOut(exReadData2Out), .reset(reset), .clk(clk));
 	register64Bit exPcForBLRegister (.writeEnable(1'b1), .writeData(address0), .dataOut(exPcForBL), .reset(reset), .clk(clk));
 	
 	mux2_1 chooseFlagSourceNegative (.a(aluNegative), .b(aluNegativePrev), .x(exFlags[9]), .out(aluNegativeFlag));
 	mux2_1 chooseFlagSourceOverflow (.a(aluOverflow), .b(aluOverflowPrev), .x(exFlags[9]), .out(aluOverflowFlag));
+	mux64x2_1 pickALUPassthroughMux (.zero(aluOutput), .one(exPcForBL), .control(exFlags[2]), .out(exDataPassthroughValue));
 	
 	// DATA MEMORY //
 	
@@ -142,10 +143,20 @@ module cpu (clk, reset);
 	mux64x2_1 BLMux (.zero(dmMemToRegToL), .one(wbPcForBL), .control(wbFlags[2]), .out(BLMuxOut));
 	
 	// FORWARDING //
-	comp5Bit dmToRfRn (.a(dmRd), .b(rfRn), .out(dmRdRfRnMatch));
-	comp5Bit dmToRfRm (.a(dmRd), .b(rfRm), .out(dmRdRfRmMatch));
-	comp5Bit exToRfRn (.a(exRd), .b(rfRn), .out(exRdRfRnMatch));
-	comp5Bit exToRfRm (.a(exRd), .b(rfRm), .out(exRdRfRmMatch));
+	generate
+		for (i = 0; i < 5; i++) begin: setUpBL // rd = 30 if BL
+			mux2_1 m (.a(1'b1), .b(exRd[i]), .x(exFlags[2]), .out(exComp5BitAVal[i]));
+			mux2_1 m2 (.a(1'b1), .b(dmRd[i]), .x(dmFlags[2]), .out(dmComp5BitAVal[i]));
+		end
+		mux2_1 m (.a(1'b0), .b(exRd[0]), .x(exFlags[2]), .out(exComp5BitAVal[0]));
+		mux2_1 m2 (.a(1'b0), .b(dmRd[0]), .x(dmFlags[2]), .out(dmComp5BitAVal[0]));
+	
+	endgenerate	
+	
+	comp5Bit dmToRfRn (.a(dmComp5BitAVal), .b(rfRn), .out(dmRdRfRnMatch));
+	comp5Bit dmToRfRm (.a(dmComp5BitAVal), .b(rfRm), .out(dmRdRfRmMatch));
+	comp5Bit exToRfRn (.a(exComp5BitAVal), .b(rfRn), .out(exRdRfRnMatch));
+	comp5Bit exToRfRm (.a(exComp5BitAVal), .b(rfRm), .out(exRdRfRmMatch));
 	
 	or #50 setUseForwardedDataDa (useForwardedDataDa, dmRdRfRnMatch, exRdRfRnMatch);
 	or #50 setUseForwardedDataDb (useForwardedDataDb, dmRdRfRmMatch, exRdRfRmMatch);	
@@ -155,11 +166,14 @@ module cpu (clk, reset);
 	mux64x2_1 setForwardingDataDb (.zero(exAluOutput), .one(aluOutput), .control(exRdRfRmMatch), .out(forwardingDataDb));
 	mux64x2_1 setDataDb (.zero(readData2), .one(forwardingDataDb), .control(useForwardedDataDb), .out(regDataDb));
 	
+	//mux64x2_1 BLCaseMuxDa (.zero(regDataDa), .one(aluOutput), .control(exRdRfRmMatch), .out(forwardingDataDb));
+	//mux64x2_1 BLCaseMuxDb(.zero(regDataDb), .one(forwardingDataDb), .control(useForwardedDataDb), .out(regDataDb));
+	
 	generate
 		for (i = 1; i < 5; i++) begin: setRd // rd = 30 if BL
 			mux2_1 m (.a(1'b1), .b(wbInstruction[i]), .x(wbFlags[2]), .out(wbRd[i]));
 		end
-		mux2_1 m (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
+		mux2_1 m3 (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
 	
 	endgenerate	
 	
