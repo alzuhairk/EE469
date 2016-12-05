@@ -29,7 +29,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 			end
 			
 			11'b01010100???: begin // B.LT
-				flags = {5'b0??00, /*BLTTaken */ 1'b1, 4'b0?0?};
+				flags = {5'b0??00, /*BLTTaken */ 1'b1, 4'b000?};
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
@@ -37,7 +37,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 			end
 			
 			11'b10110100???: begin // CBZ
-				flags = {5'b00?00, /*BrTaken*/ 1'b1, 4'b0?0?};
+				flags = {5'b00?00, /*BrTaken*/ 1'b1, 4'b000?};
 				ALUOp = 3'b000;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
@@ -61,7 +61,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 			end
 			
 			11'b11010110000: begin // BR
-				flags = 10'b0??00???1?;
+				flags = 10'b0??00??01?;
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
@@ -85,7 +85,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 			end
 			
 			11'b11111000000: begin // STUR
-				flags = 10'b01?010??00;
+				flags = 10'b01?010?000;
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];

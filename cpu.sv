@@ -182,7 +182,7 @@ endmodule
 module cpuTestbench ();
 
 	parameter ClockDelay = 10000;
-	parameter loopEnd = 50;
+	parameter loopEnd = 1000;
 
 	logic clk;
 	logic reset;
