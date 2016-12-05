@@ -185,7 +185,7 @@ module cpu (clk, reset);
 	comp5Bit dmToRfRd (.a(forwardingRfRdMuxValForComp), .b(dmComp5BitAVal), .out(dmRfRdDmRdMatch));
 	
 	or #50 setUseForwardedDataRfRd (useForwardedDataRfRd, exRfRdExRdMatch, dmRfRdDmRdMatch);
-	or #50 setIsSTURorCBZForIFandRF (isSTURorCBZforIForRF, isSTURorCBZ, rfIsSTURorCBZ);
+	or #50 setIsSTURorCBZForIFandRF (isSTURorCBZforIForRF, 1'b0, rfIsSTURorCBZ);
 	
 	mux64x2_1 chooseSourceForForwardedDataForRfRd (.zero(exAluOutput), .one(aluOutput), .control(exRfRdExRdMatch), .out(forwardingDataRfDb));
 	mux64x2_1 setRfDbForwardedFromDwMux (.zero(readData2), .one(forwardingDataRfDb), .control(useForwardedDataRfRd), .out(forwardedDataRfRd));
