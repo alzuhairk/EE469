@@ -31,8 +31,9 @@ module cpu (clk, reset);
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
 	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out;
-	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag;
+	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag, doBr;
 	logic [4:0] rfRn, rfRm, exRd, dmRd;
+	logic [1:0] brType, rfBrType;
 	
 	assign Imm19 = instruction[23:5]; 
 	assign Imm26 = instruction[25:0];
@@ -60,7 +61,7 @@ module cpu (clk, reset);
 	
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address0), .reset(reset), .clk(clk));
 	register64Bit pcFlipFlop (.writeEnable(1'b1), .writeData(address0), .dataOut(pcOutCycleLate), .reset(reset), .clk(clk));
-	mux64x2_1 pcCycleLateMux (.zero(address0), .one(pcOutCycleLate), .control((rfFlags[4]&(rfFlags[3]  | BLTTaken))), .out(address));
+	mux64x2_1 pcCycleLateMux (.zero(address0), .one(pcOutCycleLate), .control(doBr), .out(address));
 	
 	instructmem insMem(.address(address0), .instruction(instruction), .clk(clk));
 		
@@ -71,11 +72,13 @@ module cpu (clk, reset);
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
 	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
 	
-	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control((rfFlags[4]&(rfFlags[3]  | BLTTaken))), .out(muxBrTakenToMuxBr));
+	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control(doBr), .out(muxBrTakenToMuxBr));
 	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(rfFlags[1]), .out(muxBrToPC));
 	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(rfFlags[3]), .out(muxToShiftLeft));
 	
-	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .aluNegativePrev(aluNegativeFlag), .aluOverflowPrev(aluOverflowFlag), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));	
+	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd), .brType(brType));
+
+	mux4_1 doBrMux (.in({1'b0, BLTTaken, isZero, 1'b1}), .x(rfBrType), .out(doBr));
 	
 	// REGISTER FETCH //
 	
@@ -86,6 +89,9 @@ module cpu (clk, reset);
 	register64Bit rfDb2Register (.writeEnable(1'b1), .writeData(regDataDb), .dataOut(rfDb2), .reset(reset), .clk(clk));
 	register64Bit rfDbRegister (.writeEnable(1'b1), .writeData(ALUSrcMuxOutput), .dataOut(rfDb), .reset(reset), .clk(clk));
 	register14Bit rfFlagsRegister (.writeEnable(1'b1), .writeData({ALUOp, dataMemReadEn, flags}), .dataOut(rfFlags), .reset(reset), .clk(clk));
+	
+	D_FF rfBrTypeSet1 (.q(rfBrType[1]), .d(brType[1]), .reset(reset), .clk(clk));
+	D_FF rfBrTypeSet0 (.q(rfBrType[0]), .d(brType[0]), .reset(reset), .clk(clk));
 	
 	signExtend9 se9 (.in(rfInstruction[20:12]), .out(DAddr9SEOut));
 	zeroExtend ze (.in(rfInstruction[21:10]), .out(ALU_Imm12ZEOut));

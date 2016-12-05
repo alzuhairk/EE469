@@ -1,37 +1,39 @@
 `timescale 1 ps/1 ps
 
-module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverflowPrev, flags, ALUOp, dataMemReadEn, Rd);
+module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemReadEn, Rd, brType);
 	input logic [10:0] opcode;
 	input logic [31:0] instruction;
-	input logic aluNegativePrev, aluOverflowPrev, BrTaken;
+	input logic BrTaken;
 	output logic [9:0] flags;
 	output logic [2:0] ALUOp;
 	output logic dataMemReadEn;
 	output logic [4:0] Rd;
-	
-	xor #50 blt (BLTTaken, aluNegativePrev, aluOverflowPrev);
+	output logic [1:0] brType;
 
 	always_comb begin
 		casez (opcode)
 			11'b000101?????: begin // B
-				flags = 10'b???001100?;
+				flags = 10'b0??001100?;
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b00;
 			end
 			
 			11'b100101?????: begin // BL
-				flags = 10'b???101110?;
+				flags = 10'b0??101110?;
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = 5'b11110;
+				brType = 2'b00;
 			end
 			
 			11'b01010100???: begin // B.LT
-				flags = {5'b???00, BLTTaken, 4'b0?0?};
+				flags = {5'b0??00, /*BLTTaken */ 1'b1, 4'b0?0?};
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b10;
 			end
 			
 			11'b10110100???: begin // CBZ
@@ -39,6 +41,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b000;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b01;
 			end
 			
 			11'b10101011000: begin // ADDS
@@ -46,6 +49,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end
 			
 			11'b11101011000: begin // SUBS
@@ -53,6 +57,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b011;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end
 			
 			11'b11010110000: begin // BR
@@ -60,20 +65,23 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b00;
 			end
 			
 			11'b1001000100?: begin // ADDI
-				flags = 10'b?10100?001;
+				flags = 10'b010100?001;
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end
 			
 			11'b11111000010: begin // LDUR
-				flags = 10'b?11100?000;
+				flags = 10'b011100?000;
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b1;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end
 			
 			11'b11111000000: begin // STUR
@@ -81,6 +89,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end			
 			
 			default: begin
@@ -88,6 +97,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, aluNegativePrev, aluOverf
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
+				brType = 2'b11;
 			end
 		endcase
 	end
