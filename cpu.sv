@@ -16,7 +16,7 @@ module cpu (clk, reset);
 	
 	logic [4:0] reg2LocMuxOut;
 	logic [63:0] aluInput2MuxOut, ADDImmMuxOut, dataMemOutputMuxOut, ALUSrcMuxOutput, aluOutput, DAddr9SEOut, ALU_Imm12ZEOut, MemToRegMuxOut, BLMuxOut;
-	logic aluNegative, aluZero, aluOverflow, aluCarry_out, dataMemReadEn, BLTTaken;
+	logic aluNegative, aluZero, aluOverflow, aluCarry_out, dataMemReadEn, BLTTaken, aluNegativePrev, aluOverflowPrev;
 	
 	
 	logic [63:0] address, address0; 
@@ -30,8 +30,8 @@ module cpu (clk, reset);
 	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
-	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2;
-	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1;
+	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out;
+	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag;
 	logic [4:0] rfRn, rfRm, exRd, dmRd;
 	
 	assign Imm19 = instruction[23:5]; 
@@ -53,14 +53,14 @@ module cpu (clk, reset);
 	// wbFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	
 	compareZero cmp (.result(readData2), .isZero(isZero));
-
+	xor #50 blt (BLTTaken, aluNegativeFlag, aluOverflowFlag);
 
 	
 	// INSTRUCTION FETCH //
 	
 	pc programCounter (.writeEnable(1'b1), .writeData(muxBrToPC), .dataOut(address0), .reset(reset), .clk(clk));
 	register64Bit pcFlipFlop (.writeEnable(1'b1), .writeData(address0), .dataOut(pcOutCycleLate), .reset(reset), .clk(clk));
-	mux64x2_1 pcCycleLateMux (.zero(address0), .one(pcOutCycleLate), .control((rfFlags[4]&(rfFlags[3])) | (rfFlags[4]&isZero)), .out(address));
+	mux64x2_1 pcCycleLateMux (.zero(address0), .one(pcOutCycleLate), .control((rfFlags[4]&(rfFlags[3]  | BLTTaken))), .out(address));
 	
 	instructmem insMem(.address(address0), .instruction(instruction), .clk(clk));
 		
@@ -71,11 +71,11 @@ module cpu (clk, reset);
 	fastAdder FA0 (.A(address), .B(64'h0000000000000004), .cntrl(1'b0), .result(adderToMux0), .cOut(cOut0), .overflow(overflow0)); // control is 0 to do addition
 	fastAdder FA1 (.A(shiftLeftToAdder), .B(address), .cntrl(1'b0), .result(adderToMux1), .cOut(cOut1), .overflow(overflow1)); // control is 0 to do addition
 	
-	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control((rfFlags[4]&(rfFlags[3])) | (rfFlags[4]&isZero)), .out(muxBrTakenToMuxBr));
+	mux64x2_1 brTaken (.zero(adderToMux0), .one(adderToMux1), .control((rfFlags[4]&(rfFlags[3]  | BLTTaken))), .out(muxBrTakenToMuxBr));
 	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(rfFlags[1]), .out(muxBrToPC));
 	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(rfFlags[3]), .out(muxToShiftLeft));
 	
-	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .aluNegativePrev(aluNegativePrev), .aluOverflowPrev(aluOverflowPrev), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));	
+	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .aluNegativePrev(aluNegativeFlag), .aluOverflowPrev(aluOverflowFlag), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd));	
 	
 	// REGISTER FETCH //
 	
@@ -110,14 +110,19 @@ module cpu (clk, reset);
 	register32Bit exInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
 	register14Bit exFlagsRegister (.writeEnable(1'b1), .writeData(rfFlags), .dataOut(exFlags), .reset(reset), .clk(clk));
 	register64Bit exAluOutRegister (.writeEnable(1'b1), .writeData(aluOutput), .dataOut(exAluOutput), .reset(reset), .clk(clk));
+	register64Bit exReadData2Register (.writeEnable(1'b1), .writeData(readData2), .dataOut(exReadData2Out), .reset(reset), .clk(clk));
+	
+	mux2_1 chooseFlagSourceNegative (.a(aluNegative), .b(aluNegativePrev), .x(exFlags[9]), .out(aluNegativeFlag));
+	mux2_1 chooseFlagSourceOverflow (.a(aluOverflow), .b(aluOverflowPrev), .x(exFlags[9]), .out(aluOverflowFlag));
 	
 	// DATA MEMORY //
 	
-	datamem dataMemory (.address(exAluOutput), .write_enable(dmFlags[5]), .read_enable(dmFlags[10]), .write_data(readData2), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
+	datamem dataMemory (.address(exAluOutput), .write_enable(dmFlags[5]), .read_enable(dmFlags[10]), .write_data(dmReadData2Out), .clk(clk), .xfer_size(4'b1000), .read_data(readDataMem));
 	
 	register32Bit dmInstructionRegister (.writeEnable(1'b1), .writeData(exInstruction), .dataOut(dmInstruction), .reset(reset), .clk(clk));
 	register14Bit dmFlagsRegister (.writeEnable(1'b1), .writeData(exFlags), .dataOut(dmFlags), .reset(reset), .clk(clk));
 	register64Bit dmMemToRegToLRegister (.writeEnable(1'b1), .writeData(MemToRegMuxOut), .dataOut(dmMemToRegToL), .reset(reset), .clk(clk));
+	register64Bit dmReadData2Register (.writeEnable(1'b1), .writeData(exReadData2Out), .dataOut(dmReadData2Out), .reset(reset), .clk(clk));
 	
 	mux64x2_1 MemToRegMux (.zero(exAluOutput), .one(readDataMem), .control(dmFlags[7]), .out(MemToRegMuxOut));
 	
@@ -154,7 +159,7 @@ endmodule
 module cpuTestbench ();
 
 	parameter ClockDelay = 10000;
-	parameter loopEnd = 100;
+	parameter loopEnd = 50;
 
 	logic clk;
 	logic reset;
