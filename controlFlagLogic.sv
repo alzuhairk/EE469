@@ -17,7 +17,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b00;
+				brType = 2'b11;
 			end
 			
 			11'b100101?????: begin // BL
@@ -25,7 +25,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = 5'b11110;
-				brType = 2'b00;
+				brType = 2'b11;
 			end
 			
 			11'b01010100???: begin // B.LT
@@ -33,7 +33,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b10;
+				brType = 2'b01;
 			end
 			
 			11'b10110100???: begin // CBZ
@@ -41,7 +41,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b000;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b01;
+				brType = 2'b10;
 			end
 			
 			11'b10101011000: begin // ADDS
@@ -49,7 +49,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end
 			
 			11'b11101011000: begin // SUBS
@@ -57,7 +57,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b011;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end
 			
 			11'b11010110000: begin // BR
@@ -65,7 +65,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b00;
+				brType = 2'b11;
 			end
 			
 			11'b1001000100?: begin // ADDI
@@ -73,7 +73,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end
 			
 			11'b11111000010: begin // LDUR
@@ -81,7 +81,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b1;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end
 			
 			11'b11111000000: begin // STUR
@@ -89,7 +89,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b010;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end			
 			
 			default: begin
@@ -97,7 +97,7 @@ module controlFlagLogic (opcode, instruction, BrTaken, flags, ALUOp, dataMemRead
 				ALUOp = 3'b???;
 				dataMemReadEn = 1'b0;
 				Rd = instruction[4:0];
-				brType = 2'b11;
+				brType = 2'b00;
 			end
 		endcase
 	end
