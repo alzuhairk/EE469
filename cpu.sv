@@ -30,9 +30,9 @@ module cpu (clk, reset);
 	logic [31:0] ifInstruction, rfInstruction, exInstruction, dmInstruction, wbInstruction;
 	logic [13:0] rfFlags, exFlags, dmFlags, wbFlags;
 	logic [4:0] wbRd;
-	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL, exDataPassthroughValue;
-	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, isZero0, isZero1, aluNegativeFlag, aluOverflowFlag, doBr;
-	logic [4:0] rfRn, rfRm, exRd, dmRd, dmComp5BitAVal, exComp5BitAVal;
+	logic [63:0] rfDa, rfDb, exAluOutput, dmMemToRegToL, forwardingDataDa, forwardingDataDb, regDataDa, regDataDb, rfDb2, exReadData2Out, dmReadData2Out, dmPcForBL, exPcForBL, rfPcForBL, wbPcForBL, exDataPassthroughValue, forwardedDataRfRm, forwardedDataRfRd, forwardingDataRfDb;
+	logic dmRdRfRnMatch, dmRdRfRmMatch, exRdRfRnMatch, exRdRfRmMatch, useForwardedDataDa, useForwardedDataDb, isZero, aluNegativeFlag, aluOverflowFlag, doBr, aluOveSaveValue, aluNegSaveValue, isSTURorCBZ, exRfRdExRdMatch, dmRfRdExRdMatch, rfIsSTURorCBZ, isSTURorCBZforIForRF;
+	logic [4:0] rfRn, rfRm, exRd, dmRd, dmComp5BitAVal, exComp5BitAVal, forwardingRfRdMuxValForComp;
 	logic [1:0] brType, rfBrType;
 	
 	assign Imm19 = instruction[23:5]; 
@@ -53,7 +53,7 @@ module cpu (clk, reset);
 	// dmFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	// wbFlags = aluop, dmreadenable, reg2loc,ALUSrc,MemToReg,RegWrite,MemWrite,BrTaken,UnCondBr,LBranch,IsBr,AddImm;
 	
-	compareZero cmp (.result(readData2), .isZero(isZero));
+	compareZero cmp (.result(regDataDb), .isZero(isZero));
 	xor #50 blt (BLTTaken, aluNegativeFlag, aluOverflowFlag);
 
 	
@@ -76,7 +76,7 @@ module cpu (clk, reset);
 	mux64x2_1 isBr (.zero(muxBrTakenToMuxBr), .one(readData2), .control(rfFlags[1]), .out(muxBrToPC));
 	mux64x2_1 uncondBr (.zero(Imm19Extended), .one(Imm26Extended), .control(rfFlags[3]), .out(muxToShiftLeft));
 	
-	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd), .brType(brType));
+	controlFlagLogic controlLogic (.opcode(opcode), .instruction(instruction), .BrTaken(isZero), .flags(flags), .ALUOp(ALUOp), .dataMemReadEn(dataMemReadEn), .Rd(Rd), .brType(brType), .isSTURorCBZ(isSTURorCBZ));
 
 	mux4_1 doBrMux (.in({1'b1, isZero, BLTTaken, 1'b0}), .x(rfBrType), .out(doBr));
 	
@@ -92,6 +92,7 @@ module cpu (clk, reset);
 	
 	D_FF rfBrTypeSet1 (.q(rfBrType[1]), .d(brType[1]), .reset(reset), .clk(clk));
 	D_FF rfBrTypeSet0 (.q(rfBrType[0]), .d(brType[0]), .reset(reset), .clk(clk));
+	D_FF rfSetIsSTURorCBZ (.q(rfIsSTURorCBZ), .d(isSTURorCBZ), .reset(reset), .clk(clk));
 	
 	signExtend9 se9 (.in(rfInstruction[20:12]), .out(DAddr9SEOut));
 	zeroExtend ze (.in(rfInstruction[21:10]), .out(ALU_Imm12ZEOut));
@@ -110,13 +111,16 @@ module cpu (clk, reset);
 	// EXECUTE //
 	
 	alu arithmeticLogic (.A(rfDa), .B(rfDb), .cntrl(exFlags[13:11]), .result(aluOutput), .negative(aluNegative), .zero(aluZero), .overflow(aluOverflow), .carry_out(aluCarryOut));
-	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegative), .reset(reset), .clk(clk));
-	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOverflow), .reset(reset), .clk(clk));
+	D_FF aluNegSave (.q(aluNegativePrev), .d(aluNegSaveValue), .reset(reset), .clk(clk));
+	D_FF aluOvSave (.q(aluOverflowPrev), .d(aluOveSaveValue), .reset(reset), .clk(clk));
+	
+	mux2_1 useNewValAluNegativePrev (.a(aluNegative), .b(aluNegativePrev), .x(exFlags[9]), .out(aluNegSaveValue));
+	mux2_1 useNewValAluOverflowPrev (.a(aluOverflow), .b(aluOverflowPrev), .x(exFlags[9]), .out(aluOveSaveValue));
 	
 	register32Bit exInstructionRegister (.writeEnable(1'b1), .writeData(rfInstruction), .dataOut(exInstruction), .reset(reset), .clk(clk));
 	register14Bit exFlagsRegister (.writeEnable(1'b1), .writeData(rfFlags), .dataOut(exFlags), .reset(reset), .clk(clk));
 	register64Bit exAluOutRegister (.writeEnable(1'b1), .writeData(exDataPassthroughValue), .dataOut(exAluOutput), .reset(reset), .clk(clk));
-	register64Bit exReadData2Register (.writeEnable(1'b1), .writeData(readData2), .dataOut(exReadData2Out), .reset(reset), .clk(clk));
+	register64Bit exReadData2Register (.writeEnable(1'b1), .writeData(regDataDb), .dataOut(exReadData2Out), .reset(reset), .clk(clk));
 	register64Bit exPcForBLRegister (.writeEnable(1'b1), .writeData(address0), .dataOut(exPcForBL), .reset(reset), .clk(clk));
 	
 	mux2_1 chooseFlagSourceNegative (.a(aluNegative), .b(aluNegativePrev), .x(exFlags[9]), .out(aluNegativeFlag));
@@ -158,24 +162,39 @@ module cpu (clk, reset);
 	comp5Bit exToRfRn (.a(exComp5BitAVal), .b(rfRn), .out(exRdRfRnMatch));
 	comp5Bit exToRfRm (.a(exComp5BitAVal), .b(rfRm), .out(exRdRfRmMatch));
 	
+	// For rd as a read, i.e. STUR and CBZ
+	generate
+		for (i = 0; i < 5; i++) begin: SetIsSTURorCBZMuxes // rd = 30 if BL
+			mux2_1 m3 (.a(rfInstruction[i]), .b(1'b1), .x(isSTURorCBZforIForRF), .out(forwardingRfRdMuxValForComp[i]));
+		end	
+	endgenerate
+	
+	comp5Bit exToRfRd (.a(forwardingRfRdMuxValForComp), .b(exComp5BitAVal), .out(exRfRdExRdMatch));
+	comp5Bit dmToRfRd (.a(forwardingRfRdMuxValForComp), .b(dmComp5BitAVal), .out(dmRfRdDmRdMatch));
+	
+	or #50 setUseForwardedDataRfRd (useForwardedDataRfRd, exRfRdExRdMatch, dmRfRdDmRdMatch);
+	or #50 setIsSTURorCBZForIFandRF (isSTURorCBZforIForRF, isSTURorCBZ, rfIsSTURorCBZ);
+	
+	mux64x2_1 chooseSourceForForwardedDataForRfRd (.zero(aluOutput), .one(exAluOutput), .control(exRfRdExRdMatch), .out(forwardingDataRfDb));
+	mux64x2_1 setRfDbForwardedFromDwMux (.zero(readData2), .one(forwardingDataRfDb), .control(useForwardedDataRfRd), .out(forwardedDataRfRd));
+	
+	mux64x2_1 setDataDb (.zero(forwardedDataRfRm), .one(forwardedDataRfRd), .control(isSTURorCBZforIForRF), .out(regDataDb));
+	
 	or #50 setUseForwardedDataDa (useForwardedDataDa, dmRdRfRnMatch, exRdRfRnMatch);
 	or #50 setUseForwardedDataDb (useForwardedDataDb, dmRdRfRmMatch, exRdRfRmMatch);	
 	
 	mux64x2_1 setForwardingDataDa (.zero(exAluOutput), .one(aluOutput), .control(exRdRfRnMatch), .out(forwardingDataDa));
 	mux64x2_1 setDataDa (.zero(readData1), .one(forwardingDataDa), .control(useForwardedDataDa), .out(regDataDa));
 	mux64x2_1 setForwardingDataDb (.zero(exAluOutput), .one(aluOutput), .control(exRdRfRmMatch), .out(forwardingDataDb));
-	mux64x2_1 setDataDb (.zero(readData2), .one(forwardingDataDb), .control(useForwardedDataDb), .out(regDataDb));
-	
-	//mux64x2_1 BLCaseMuxDa (.zero(regDataDa), .one(aluOutput), .control(exRdRfRmMatch), .out(forwardingDataDb));
-	//mux64x2_1 BLCaseMuxDb(.zero(regDataDb), .one(forwardingDataDb), .control(useForwardedDataDb), .out(regDataDb));
-	
+	mux64x2_1 setForwardingDataDbForSetData (.zero(readData2), .one(forwardingDataDb), .control(useForwardedDataDb), .out(forwardedDataRfRm));
+		
 	generate
 		for (i = 1; i < 5; i++) begin: setRd // rd = 30 if BL
 			mux2_1 m (.a(1'b1), .b(wbInstruction[i]), .x(wbFlags[2]), .out(wbRd[i]));
 		end
 		mux2_1 m (.a(1'b0), .b(wbInstruction[0]), .x(wbFlags[2]), .out(wbRd[0]));
 	
-	endgenerate	
+	endgenerate
 	
 endmodule
 
